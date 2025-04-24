@@ -6,7 +6,7 @@ def DOCKERHUB_USERNAME = 'avimajid' // Ganti dengan username Docker Hub
 def TARGET_SERVER_IP = '34.101.223.209' // Ganti dengan IP atau hostname server target
 def TARGET_SERVER_USER = 'userdeploy' // Ganti dengan user SSH di server target
 def CONTAINER_NAME = 'my-nginx-app' // Nama kontainer yang akan berjalan di server target
-def APP_PORT = 80 // Port di host target yang akan di-map ke port 80 kontainer
+def APP_PORT = 9090 // Port di host target yang akan di-map ke port 80 kontainer
 
 pipeline {
     agent any // Menjalankan pipeline di agent Jenkins mana saja yang tersedia
