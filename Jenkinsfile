@@ -74,7 +74,7 @@ pipeline {
                 sshagent([TARGET_SERVER_SSH_CREDENTIALS_ID]) {
                     // Menjalankan perintah di server target via SSH
                     sh """
-                        ssh -o StrictHostKeyChecking=no ${TARGET_SERVER_USER}@${TARGET_SERVER_IP} << EOF
+                        ssh -o StrictHostKeyChecking=no ${TARGET_SERVER_USER}@${TARGET_SERVER_IP}
                             echo 'Menarik image terbaru dari Docker Hub...'
                             docker pull ${LATEST_IMAGE_NAME}
 
@@ -86,7 +86,6 @@ pipeline {
                             docker run -d --name ${CONTAINER_NAME} -p ${APP_PORT}:80 ${LATEST_IMAGE_NAME}
 
                             echo 'Deployment selesai. Aplikasi berjalan di http://${TARGET_SERVER_IP}:${APP_PORT}'
-                        EOF
                     """
                 }
             }
