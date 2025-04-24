@@ -44,7 +44,7 @@ pipeline {
                 // Menjalankan Trivy dari shell. Pipeline akan gagal jika ditemukan kerentanan HIGH atau CRITICAL (--exit-code 1)
                 // --ignore-unfixed digunakan agar tidak gagal karena vuln yg belum ada patchnya
                 // Sesuaikan severity sesuai kebutuhan (misal: 'CRITICAL' saja)
-                sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}"
+                sh "${TRIVY_PATH} image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}"
             }
         }
 
