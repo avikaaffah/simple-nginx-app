@@ -38,13 +38,28 @@ pipeline {
             }
         }
 
+        // stage('3. Scan Image with Trivy') {
+        //     steps {
+        //         echo "Memindai image ${IMAGE_NAME} dengan Trivy..."
+        //         // Menjalankan Trivy dari shell. Pipeline akan gagal jika ditemukan kerentanan HIGH atau CRITICAL (--exit-code 1)
+        //         // --ignore-unfixed digunakan agar tidak gagal karena vuln yg belum ada patchnya
+        //         // Sesuaikan severity sesuai kebutuhan (misal: 'CRITICAL' saja)
+        //         sh "${TRIVY_PATH} image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}"
+        //     }
+        // }
+
         stage('3. Scan Image with Trivy') {
-            steps {
-                echo "Memindai image ${IMAGE_NAME} dengan Trivy..."
-                // Menjalankan Trivy dari shell. Pipeline akan gagal jika ditemukan kerentanan HIGH atau CRITICAL (--exit-code 1)
-                // --ignore-unfixed digunakan agar tidak gagal karena vuln yg belum ada patchnya
-                // Sesuaikan severity sesuai kebutuhan (misal: 'CRITICAL' saja)
-                sh "${TRIVY_PATH} image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}"
+            agent {
+             // Gunakan agent docker untuk stage ini
+                docker {
+                  image 'aquasec/trivy:latest' // Gunakan image Trivy resmi
+                 args '-v /var/run/docker.sock:/var/run/docker.sock' // Mount Docker socket
+                }
+             }
+             steps {
+                 echo "Memindai image ${IMAGE_NAME} dengan Trivy (dalam kontainer)..."
+                 // Perintah dijalankan di dalam kontainer Trivy
+                 sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE_NAME}"
             }
         }
 
