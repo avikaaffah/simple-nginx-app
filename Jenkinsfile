@@ -16,7 +16,7 @@ pipeline {
         IMAGE_NAME = "${DOCKERHUB_USERNAME}/${GITHUB_REPO_NAME}:${env.BUILD_NUMBER}"
         LATEST_IMAGE_NAME = "${DOCKERHUB_USERNAME}/${GITHUB_REPO_NAME}:latest"
         // Path ke Trivy (sesuaikan jika perlu)
-        TRIVY_PATH = '/var/lib/snapd/snaps/trivy_276.snap' // Ganti jika path instalasi Trivy berbeda
+        TRIVY_PATH = '/snap/bin/trivy' // Ganti jika path instalasi Trivy berbeda
     }
 
     stages {
