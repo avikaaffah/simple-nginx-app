@@ -38,27 +38,34 @@ pipeline {
         
         // -- Stage Baru: Code Analysis with SonarQube --
         stage('Code Analysis with SonarQube') {
+             // Definisikan agent lagi untuk stage ini jika perlu tool spesifik
+             agent {
+                 any // Atau label agent spesifik
+                 tools {
+                     // ---- TAMBAHKAN BLOK INI ----
+                     // 'SonarQubeScanner' adalah tipe tool yang disediakan plugin
+                     // 'DefaultSonarScanner' adalah NAMA konfigurasi tool di Global Tool Config
+                     // Ganti 'DefaultSonarScanner' dengan nama yang dikonfigurasi.
+                     sonarQube 'DefaultSonarQubeScanner'
+                     // ---------------------------
+                 }
+             }
+             steps {
+                 echo "Running SonarQube analysis..."
+                 withSonarQubeEnv(env.SONARQUBE_SERVER_NAME) {
+                     // Karena tool sudah didefinisikan di blok agent.tools,
+                     // perintah 'sonar-scanner' seharusnya sekarang ada di PATH.
+                     sh """
+                     sonar-scanner \\
+                       -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \\
+                       -Dsonar.projectName=${env.SONAR_PROJECT_NAME} \\
+                       -Dsonar.projectVersion=${env.SONAR_PROJECT_VERSION} \\
+                       -Dsonar.sources=.
+                     """
+                 }
+             }
+         }
 
-            steps {
-                echo "Running SonarQube analysis..."
-                // withSonarQubeEnv akan menyediakan SONAR_HOST_URL dan SONAR_AUTH_TOKEN
-                withSonarQubeEnv(env.SONARQUBE_SERVER_NAME) {
-                    // Menjalankan SonarQube Scanner
-                    // Properti dapat ditentukan di sini atau dalam file sonar-project.properties
-                    sh """
-                    sonar-scanner \\
-                      -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \\
-                      -Dsonar.projectName=${env.SONAR_PROJECT_NAME} \\
-                      -Dsonar.projectVersion=${env.SONAR_PROJECT_VERSION} \\
-                      -Dsonar.sources=. \\
-                      # Tambahkan properti lain jika perlu, misalnya:
-                      # -Dsonar.language=html # Jika hanya menganalisis HTML
-                      # -Dsonar.exclusions=**/*.css # Mengecualikan file CSS
-                    """
-                    // Catatan: Backslash (\) digunakan untuk memecah baris dalam string multi-baris shell (sh)
-                }
-            }
-        }
         stage('2. Build Docker Image') {
             steps {
                 script {
