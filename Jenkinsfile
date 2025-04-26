@@ -8,6 +8,11 @@ def TARGET_SERVER_USER = 'userdeploy' // Ganti dengan user SSH di server target
 def CONTAINER_NAME = 'my-nginx-app' // Nama kontainer yang akan berjalan di server target
 def APP_PORT = 9090 // Port di host target yang akan di-map ke port 80 kontainer
 
+// Variabel Spesifik SonarQube
+def SONARQUBE_SERVER_NAME = 'MySonarQubeServer' // Sesuaikan dengan Nama Server SonarQube di Jenkins Config
+def SONARQUBE_PROJECT_KEY = "com.yomamen:${GITHUB_REPO_NAME}" // Kunci Unik Project di SonarQube (sesuaikan!)
+
+
 pipeline {
     agent any // Menjalankan pipeline di agent Jenkins mana saja yang tersedia
 
@@ -17,14 +22,6 @@ pipeline {
         LATEST_IMAGE_NAME = "${DOCKERHUB_USERNAME}/${GITHUB_REPO_NAME}:latest"
         // Path ke Trivy (sesuaikan jika perlu)
         TRIVY_PATH = '/snap/bin/trivy' // Ganti jika path instalasi Trivy berbeda
-
-        // -- Variabel SonarQube --
-        SONARQUBE_SERVER_NAME = 'MySonarQubeServer' // Nama server SonarQube di konfigurasi Jenkins
-        // Kredensial token SonarQube akan diakses via withSonarQubeEnv
-        SONAR_PROJECT_KEY = 'my-nginx-app' // Key unik untuk proyek ini di SonarQube
-        SONAR_PROJECT_NAME = 'My Nginx Web App' // Nama proyek di SonarQube
-        SONAR_PROJECT_VERSION = "${BUILD_NUMBER}" // Versi proyek, bisa pakai nomor build
-        // -- End Variabel SonarQube --
     }
 
     stages {
@@ -35,38 +32,31 @@ pipeline {
                 checkout scm
             }
         }
-        
-        // -- Stage Baru: Code Analysis with SonarQube --
-        stage('Code Analysis with SonarQube') {
-             // Definisikan agent lagi untuk stage ini jika perlu tool spesifik
-             agent {
-                 any // Atau label agent spesifik
-                 tools {
-                     // ---- TAMBAHKAN BLOK INI ----
-                     // 'SonarQubeScanner' adalah tipe tool yang disediakan plugin
-                     // 'DefaultSonarScanner' adalah NAMA konfigurasi tool di Global Tool Config
-                     // Ganti 'DefaultSonarScanner' dengan nama yang dikonfigurasi.
-                     sonarQube 'DefaultSonarQubeScanner'
-                     // ---------------------------
-                 }
-             }
-             steps {
-                 echo "Running SonarQube analysis..."
-                 withSonarQubeEnv(env.SONARQUBE_SERVER_NAME) {
-                     // Karena tool sudah didefinisikan di blok agent.tools,
-                     // perintah 'sonar-scanner' seharusnya sekarang ada di PATH.
-                     sh """
-                     sonar-scanner \\
-                       -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \\
-                       -Dsonar.projectName=${env.SONAR_PROJECT_NAME} \\
-                       -Dsonar.projectVersion=${env.SONAR_PROJECT_VERSION} \\
-                       -Dsonar.sources=.
-                     """
-                 }
-             }
-         }
+        stage('2. SonarQube Analysis') {
+            steps {
+                script {
+                    // Menggunakan nama Konfigurasi SonarQube Server dari Jenkins System Config
+                    // dan nama Konfigurasi SonarScanner dari Jenkins Global Tools Config
+                    def scannerHome = tool name: 'SonarScanner Default', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    // Menggunakan wrapper untuk inject URL & Token SonarQube
+                    withSonarQubeEnv(SONARQUBE_SERVER_NAME) {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${SONARQUBE_PROJECT_KEY} \
+                            -Dsonar.sources=. \
+                            -Dsonar.projectName=${GITHUB_REPO_NAME} \
+                            -Dsonar.projectVersion=${env.BUILD_NUMBER} \
+                            -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                            -Dsonar.login=${env.SONAR_AUTH_TOKEN}
+                        """
+                        // Catatan: -Dsonar.host.url dan -Dsonar.login di-inject oleh withSonarQubeEnv
+                        // Jika ada file konfigurasi sonar-project.properties di repo, beberapa -D flag bisa dihilangkan
+                    }
+                }
+            }
+        }
 
-        stage('2. Build Docker Image') {
+        stage('3. Build Docker Image') {
             steps {
                 script {
                     echo "Membangun image Docker: ${IMAGE_NAME}"
@@ -76,7 +66,7 @@ pipeline {
             }
         }
 
-        stage('3. Scan Image with Trivy') {
+        stage('4. Scan Image with Trivy') {
             steps {
                 echo "Memindai image ${IMAGE_NAME} dengan Trivy..."
                 // Menjalankan Trivy dari shell. Pipeline akan gagal jika ditemukan kerentanan HIGH atau CRITICAL (--exit-code 1)
@@ -87,7 +77,7 @@ pipeline {
         }
 
 
-        stage('4. Push Image to Docker Hub') {
+        stage('5. Push Image to Docker Hub') {
             // Stage ini hanya berjalan jika stage sebelumnya (Scan) berhasil
             steps {
                 script {
@@ -104,7 +94,7 @@ pipeline {
             }
         }
 
-        stage('5. Deploy to Target Server') {
+        stage('6. Deploy to Target Server') {
             // Stage ini hanya berjalan jika stage sebelumnya (Push) berhasil
             steps {
                 echo "Mendeploy image ${LATEST_IMAGE_NAME} ke server target ${TARGET_SERVER_IP}..."
