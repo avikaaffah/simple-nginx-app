@@ -38,6 +38,18 @@ pipeline {
         
         // -- Stage Baru: Code Analysis with SonarQube --
         stage('Code Analysis with SonarQube') {
+             agent {
+                 any // Atau label agent spesifik
+                 tools {
+                     // ---- TAMBAHKAN BLOK INI ----
+                     // 'SonarQubeScanner' adalah tipe tool yang disediakan plugin
+                     // 'DefaultSonarScanner' adalah NAMA konfigurasi tool di Global Tool Config
+                     // Ganti 'DefaultSonarScanner' dengan nama yang dikonfigurasi.
+                     sonarQube 'SonarScannerCLI'
+                     // ---------------------------
+                 }
+             }
+
             steps {
                 echo "Running SonarQube analysis..."
                 // withSonarQubeEnv akan menyediakan SONAR_HOST_URL dan SONAR_AUTH_TOKEN
@@ -58,7 +70,6 @@ pipeline {
                 }
             }
         }
-        
         stage('2. Build Docker Image') {
             steps {
                 script {
