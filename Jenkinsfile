@@ -17,6 +17,14 @@ pipeline {
         LATEST_IMAGE_NAME = "${DOCKERHUB_USERNAME}/${GITHUB_REPO_NAME}:latest"
         // Path ke Trivy (sesuaikan jika perlu)
         TRIVY_PATH = '/snap/bin/trivy' // Ganti jika path instalasi Trivy berbeda
+
+        // -- Variabel SonarQube --
+        SONARQUBE_SERVER_NAME = 'MySonarQubeServer' // Nama server SonarQube di konfigurasi Jenkins
+        // Kredensial token SonarQube akan diakses via withSonarQubeEnv
+        SONAR_PROJECT_KEY = 'my-nginx-app' // Key unik untuk proyek ini di SonarQube
+        SONAR_PROJECT_NAME = 'My Nginx Web App' // Nama proyek di SonarQube
+        SONAR_PROJECT_VERSION = "${BUILD_NUMBER}" // Versi proyek, bisa pakai nomor build
+        // -- End Variabel SonarQube --
     }
 
     stages {
@@ -27,7 +35,30 @@ pipeline {
                 checkout scm
             }
         }
-
+        
+        // -- Stage Baru: Code Analysis with SonarQube --
+        stage('Code Analysis with SonarQube') {
+            steps {
+                echo "Running SonarQube analysis..."
+                // withSonarQubeEnv akan menyediakan SONAR_HOST_URL dan SONAR_AUTH_TOKEN
+                withSonarQubeEnv(env.SONARQUBE_SERVER_NAME) {
+                    // Menjalankan SonarQube Scanner
+                    // Properti dapat ditentukan di sini atau dalam file sonar-project.properties
+                    sh """
+                    sonar-scanner \\
+                      -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \\
+                      -Dsonar.projectName=${env.SONAR_PROJECT_NAME} \\
+                      -Dsonar.projectVersion=${env.SONAR_PROJECT_VERSION} \\
+                      -Dsonar.sources=. \\
+                      # Tambahkan properti lain jika perlu, misalnya:
+                      # -Dsonar.language=html # Jika hanya menganalisis HTML
+                      # -Dsonar.exclusions=**/*.css # Mengecualikan file CSS
+                    """
+                    // Catatan: Backslash (\) digunakan untuk memecah baris dalam string multi-baris shell (sh)
+                }
+            }
+        }
+        
         stage('2. Build Docker Image') {
             steps {
                 script {
