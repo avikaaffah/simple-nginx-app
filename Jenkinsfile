@@ -32,6 +32,29 @@ pipeline {
                 checkout scm
             }
         }
+        stage('2. SonarQube Analysis') {
+            steps {
+                script {
+                    // Menggunakan nama Konfigurasi SonarQube Server dari Jenkins System Config
+                    // dan nama Konfigurasi SonarScanner dari Jenkins Global Tools Config
+                    def scannerHome = tool name: 'SonarScanner Default', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    // Menggunakan wrapper untuk inject URL & Token SonarQube
+                    withSonarQubeEnv(SONARQUBE_SERVER_NAME) {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${SONARQUBE_PROJECT_KEY} \
+                            -Dsonar.sources=. \
+                            -Dsonar.projectName=${GITHUB_REPO_NAME} \
+                            -Dsonar.projectVersion=${env.BUILD_NUMBER} \
+                            -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                            -Dsonar.login=${env.SONAR_AUTH_TOKEN}
+                        """
+                        // Catatan: -Dsonar.host.url dan -Dsonar.login di-inject oleh withSonarQubeEnv
+                        // Jika ada file konfigurasi sonar-project.properties di repo, beberapa -D flag bisa dihilangkan
+                    }
+                }
+            }
+        }
 
         stage('3. Build Docker Image') {
             steps {
